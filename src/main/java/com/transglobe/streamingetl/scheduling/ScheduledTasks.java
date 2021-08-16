@@ -59,8 +59,8 @@ public class ScheduledTasks {
 	@Value("${kafka.state-change.log.file}")
 	private String kafkaStatechangeLogFile;
 
-	@Value("${kafka.connect.partycontact.log.file}")
-	private String kafkaConnectPartycontactLogFile;
+	@Value("${kafka.connect.log.file}")
+	private String kafkaConnectLogFile;
 
 	@Value("${streamingetl.logs.dir}")
 	private String streamingetlLogsDir;
@@ -88,6 +88,7 @@ public class ScheduledTasks {
 	}
 	// 每月1日23時00分00秒
 	@Scheduled(cron = "00 00 23 01 * ?")
+//	@Scheduled(fixedRate = 5000)
 	public void scheduleTaskUsingCronExpression() {
 
 		long now = System.currentTimeMillis() / 1000;
@@ -98,7 +99,7 @@ public class ScheduledTasks {
 		log.info("kafkaLogcleanerLogFile ={} ", kafkaLogcleanerLogFile);
 		log.info("kafkaServerLogFile ={} ", kafkaServerLogFile);
 		log.info("kafkaStatechangeLogFile ={} ", kafkaStatechangeLogFile);
-		log.info("kafkaConnectPartycontactLogFile ={} ", kafkaConnectPartycontactLogFile);
+		log.info("kafkaConnectLogFile ={} ", kafkaConnectLogFile);
 		
 		log.info("streamingetlLogsDir ={} ", streamingetlLogsDir);
 		log.info("streamingetlCommonLogArchive ={} ", streamingetlCommonLogArchive);
@@ -129,7 +130,7 @@ public class ScheduledTasks {
 		// delete last month state change log
 		deleteKafkaStatechangeLogFile(year, month - 2);
 		
-		deleteKafkaConnectPartycontactLogFile(year, month - 2);
+		deleteKafkaConnectLogFile(year, month - 2);
 		
 		// delete streamingetl common log archive
 		deleteStreamingetlCommonLogArchive(year, month - 2);
@@ -181,12 +182,12 @@ public class ScheduledTasks {
 		deleteFilesWithPattern(kafkaLogsDir, filePattern);
 	}
 	
-	private void deleteKafkaConnectPartycontactLogFile(int year, int deletemonth) {
-		log.info("Start deleteKafkaConnectPartycontactLogFile... ");
-		log.info("kafkaLogsDir={},kafkaConnectPartycontactLogFile ={} ", kafkaLogsDir, kafkaConnectPartycontactLogFile);
+	private void deleteKafkaConnectLogFile(int year, int deletemonth) {
+		log.info("Start deleteKafkaConnectLogFile... ");
+		log.info("kafkaLogsDir={},kafkaConnectLogFile ={} ", kafkaLogsDir, kafkaConnectLogFile);
 
 		String monthStr = StringUtils.leftPad(String.valueOf(deletemonth), 2, '0'); 
-		String filePattern = "^" + kafkaConnectPartycontactLogFile+"."+year+"-"+monthStr+"-"+".*";
+		String filePattern = "^" + kafkaConnectLogFile+"."+year+"-"+monthStr+"-"+".*";
 			
 		deleteFilesWithPattern(kafkaLogsDir, filePattern);
 	}
