@@ -34,7 +34,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-@Component
 public class ScheduledTasks {
 
 	private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
@@ -87,7 +86,7 @@ public class ScheduledTasks {
 		
 	}
 	// 每月1日23時00分00秒
-	@Scheduled(cron = "00 00 23 01 * ?")
+//	@Scheduled(cron = "00 00 23 01 * ?")
 //	@Scheduled(fixedRate = 5000)
 	public void scheduleTaskUsingCronExpression() {
 

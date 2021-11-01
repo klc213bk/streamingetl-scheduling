@@ -6,10 +6,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class SchedulingetlSchedulingApplication {
+public class StreamingetlSchedulingApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SchedulingetlSchedulingApplication.class);
+		SpringApplication.run(StreamingetlSchedulingApplication.class);
 	}
 
 }
