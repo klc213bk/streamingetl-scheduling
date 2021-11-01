@@ -84,8 +84,17 @@ public class HealthCheckTask {
 	@Value("${connect.connector.config.file}")
 	private String connectConnectorConfigFile;
 
-	@Value("${server.port}")
-	private String serverPort;
+	@Value("${partycontact.rest1.host}")
+	private String partycontactRest1Host;
+	
+	@Value("${partycontact.rest1.port}")
+	private String partycontactRest1Port;
+	
+	@Value("${partycontact.rest2.host}")
+	private String partycontactRest2Host;
+	
+	@Value("${partycontact.rest2.port}")
+	private String partycontactRest2Port;
 
 	private boolean initialLogminer = true;
 
@@ -351,14 +360,14 @@ public class HealthCheckTask {
 
 			if (healthStatus == -9 ) {
 
-				LOG.info(">>>>> healthStatus={},stop ignite1&ignite1", healthStatus);
+				LOG.info(">>>>> healthStatus={},stop ignite1&ignite", healthStatus);
 
-				String urlStr1 = "http://localhost:" + connectRestPort+"/partycontact/stopIgnite1";
-				String urlStr2 = "http://localhost:" + connectRestPort+"/partycontact/stopIgnite2";
-
-				LOG.info(">>>>> stop ignite1 urlStr={}", urlStr1);
-				LOG.info(">>>>> stop ignite2 urlStr={}", urlStr2);
+				String urlStr1 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest1Host, partycontactRest1Port);
+				String urlStr2 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest2Host, partycontactRest2Port);
 				
+				LOG.info(">>>>> stop ignite urlStr1={}, urlStr2={}", urlStr1,urlStr2);
+				
+				/////// Stop Ignite1
 				URL url = new URL(urlStr1);
 				httpConn = (HttpURLConnection)url.openConnection();
 				httpConn.setRequestMethod("POST");
@@ -374,7 +383,7 @@ public class HealthCheckTask {
 				int responseCode = httpConn.getResponseCode();
 				LOG.info(">>>>> stop ignite1 responseCode={}",responseCode);
 
-				///////////////////////////////////////
+				/////// Stop Ignite2
 				url = new URL(urlStr2);
 				httpConn = (HttpURLConnection)url.openConnection();
 				httpConn.setRequestMethod("POST");
@@ -389,8 +398,7 @@ public class HealthCheckTask {
 
 				responseCode = httpConn.getResponseCode();
 				LOG.info(">>>>> stop ignite2 responseCode={}",responseCode);
-
-
+				
 			} else {
 				LOG.info(">>>>> healthStatus = {}, do nothing.", healthStatus);
 			}
