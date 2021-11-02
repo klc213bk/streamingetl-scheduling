@@ -210,128 +210,122 @@ public class HealthCheckTask {
 
 	}
 
-	@Scheduled(fixedRate = 30000, initialDelay=4000)
-	public void createNewConnector() throws Exception {
-		LOG.info(">>>>>>>>>>>> createNewConnector");
-
-		HttpURLConnection httpConn = null;
-		DataOutputStream dataOutStream = null;
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "";
-		try {
-			Class.forName(logminerDbDriver);
-			conn = DriverManager.getConnection(logminerDbUrl, logminerDbUsername, logminerDbPassword);
-			conn.setAutoCommit(false);
-
-			sql = "select HEARTBEAT_TIME, HEALTH_STATUS from " + STREAMING_HEALTH_TABLE
-					+ " order by HEARTBEAT_TIME desc fetch next 1 row only";
-			pstmt = conn.prepareStatement(sql);
-			rs = pstmt.executeQuery();
-			int healthStatus = 0;
-			Timestamp heartbeatTime = null;
-			while (rs.next()) {
-				heartbeatTime = rs.getTimestamp("HEARTBEAT_TIME");
-				healthStatus = rs.getInt("HEALTH_STATUS");
-			}
-			rs.close();
-			pstmt.close();
-
-			if (healthStatus == -1 ) {
-
-				Map<String, Object> cpuMap = getCpuUtilization();
-				Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-				Date endTime = (Date)cpuMap.get("END_TIME");
-				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
-
-				long nowmillis = System.currentTimeMillis();
-				long lag = nowmillis - heartbeatTime.getTime();
-				if (lag > 600*1000) { // 10 mins
-					//if (cpuUtil.doubleValue() < 30) {
-					// create new connector
-					LOG.info(">>>>> lag={}, cpu util < {}, create new connector...", lag, cpuUtil.doubleValue());
-
-					String reConfigStr = getReConfigStr();	
-					String urlStr = "http://localhost:" + connectRestPort+"/connectors";
-
-					LOG.info(">>>>> connector urlStr={},reConfigStr={}", urlStr, reConfigStr);
-
-					URL url = new URL(urlStr);
-					httpConn = (HttpURLConnection)url.openConnection();
-					httpConn.setRequestMethod("POST");
-					httpConn.setDoInput(true);
-					httpConn.setDoOutput(true);
-					httpConn.setRequestProperty("Content-Type", "application/json");
-					httpConn.setRequestProperty("Accept", "application/json");
-					//					String data="";
-					//					byte[] out = data.getBytes(StandardCharsets.UTF_8);
-
-					dataOutStream = new DataOutputStream(httpConn.getOutputStream());
-					dataOutStream.writeBytes(reConfigStr);
-
-					dataOutStream.flush();
-
-					int responseCode = httpConn.getResponseCode();
-					LOG.info(">>>>> createNewConnector responseCode={}",responseCode);
-
-					String connectorState = getConnectorState();
-					String taskState = getConnectorTaskState();
-					LOG.info(">>>>> check connectorState={},taskState={}", connectorState, taskState);
-
-					// reset health status
-					LOG.info(">>>>> set health status 8");
-					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setInt(1, 8);
-					pstmt.setDate(2, beginTime);
-					pstmt.setDate(3, endTime);
-					pstmt.setBigDecimal(4, cpuUtil);
-					pstmt.executeUpdate();
-					conn.commit();
-					pstmt.close();
-				} else {
-					// record and keep waiting
-					LOG.info(">>>>> lag={}, cpu util >= {}, keep waiting...", lag, cpuUtil.doubleValue());
-
-					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setInt(1, -1);
-					pstmt.setDate(2, beginTime);
-					pstmt.setDate(3, endTime);
-					pstmt.setBigDecimal(4, cpuUtil);
-					pstmt.executeUpdate();
-
-					conn.commit();
-					pstmt.close();
-				}
-
-			} else {
-				LOG.info(">>>>> healthStatus = {}, do nothing.", healthStatus);
-			}
-
-		}  catch (Exception e1) {
-
-			LOG.error(">>>>> ErrorMessage={}, stacktrace={}", ExceptionUtils.getMessage(e1), ExceptionUtils.getStackTrace(e1));
-
-			throw e1;
-		} finally {
-			if (dataOutStream != null) {
-				try {
-					dataOutStream.flush();
-					dataOutStream.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			if (httpConn != null )httpConn.disconnect();
-
-			if (rs != null) rs.close();
-			if (pstmt != null) pstmt.close();
-			if (conn != null) conn.close();
-		}
-
-	}
+//	@Scheduled(fixedRate = 30000, initialDelay=4000)
+//	public void createNewConnector() throws Exception {
+//		LOG.info(">>>>>>>>>>>> createNewConnector");
+//
+//		HttpURLConnection httpConn = null;
+//		DataOutputStream dataOutStream = null;
+//		Connection conn = null;
+//		PreparedStatement pstmt = null;
+//		ResultSet rs = null;
+//		String sql = "";
+//		try {
+//			Class.forName(logminerDbDriver);
+//			conn = DriverManager.getConnection(logminerDbUrl, logminerDbUsername, logminerDbPassword);
+//			conn.setAutoCommit(false);
+//
+//			sql = "select HEARTBEAT_TIME, HEALTH_STATUS from " + STREAMING_HEALTH_TABLE
+//					+ " order by HEARTBEAT_TIME desc fetch next 1 row only";
+//			pstmt = conn.prepareStatement(sql);
+//			rs = pstmt.executeQuery();
+//			int healthStatus = 0;
+//			Timestamp heartbeatTime = null;
+//			while (rs.next()) {
+//				heartbeatTime = rs.getTimestamp("HEARTBEAT_TIME");
+//				healthStatus = rs.getInt("HEALTH_STATUS");
+//			}
+//			rs.close();
+//			pstmt.close();
+//
+//			if (healthStatus == -1 ) {
+//
+//				Map<String, Object> cpuMap = getCpuUtilization();
+//				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
+//
+//				long nowmillis = System.currentTimeMillis();
+//				long lag = nowmillis - heartbeatTime.getTime();
+//				if (lag > 600*1000) { // 10 mins
+//					//if (cpuUtil.doubleValue() < 30) {
+//					// create new connector
+//					LOG.info(">>>>> lag={}, cpu util < {}, create new connector...", lag, cpuUtil.doubleValue());
+//
+//					String reConfigStr = getReConfigStr();	
+//					String urlStr = "http://localhost:" + connectRestPort+"/connectors";
+//
+//					LOG.info(">>>>> connector urlStr={},reConfigStr={}", urlStr, reConfigStr);
+//
+//					URL url = new URL(urlStr);
+//					httpConn = (HttpURLConnection)url.openConnection();
+//					httpConn.setRequestMethod("POST");
+//					httpConn.setDoInput(true);
+//					httpConn.setDoOutput(true);
+//					httpConn.setRequestProperty("Content-Type", "application/json");
+//					httpConn.setRequestProperty("Accept", "application/json");
+//					//					String data="";
+//					//					byte[] out = data.getBytes(StandardCharsets.UTF_8);
+//
+//					dataOutStream = new DataOutputStream(httpConn.getOutputStream());
+//					dataOutStream.writeBytes(reConfigStr);
+//
+//					dataOutStream.flush();
+//
+//					int responseCode = httpConn.getResponseCode();
+//					LOG.info(">>>>> createNewConnector responseCode={}",responseCode);
+//
+//					String connectorState = getConnectorState();
+//					String taskState = getConnectorTaskState();
+//					LOG.info(">>>>> check connectorState={},taskState={}", connectorState, taskState);
+//
+//					// reset health status
+//					LOG.info(">>>>> set health status 8");
+//					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?)";
+//					pstmt = conn.prepareStatement(sql);
+//					pstmt.setInt(1, 8);
+//					pstmt.setBigDecimal(2, cpuUtil);
+//					pstmt.executeUpdate();
+//					conn.commit();
+//					pstmt.close();
+//				} else {
+//					// record and keep waiting
+//					LOG.info(">>>>> lag={}, cpu util >= {}, keep waiting...", lag, cpuUtil.doubleValue());
+//
+//					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?)";
+//					pstmt = conn.prepareStatement(sql);
+//					pstmt.setInt(1, -1);
+//					pstmt.setBigDecimal(2, cpuUtil);
+//					pstmt.executeUpdate();
+//
+//					conn.commit();
+//					pstmt.close();
+//				}
+//
+//			} else {
+//				LOG.info(">>>>> healthStatus = {}, do nothing.", healthStatus);
+//			}
+//
+//		}  catch (Exception e1) {
+//
+//			LOG.error(">>>>> ErrorMessage={}, stacktrace={}", ExceptionUtils.getMessage(e1), ExceptionUtils.getStackTrace(e1));
+//
+//			throw e1;
+//		} finally {
+//			if (dataOutStream != null) {
+//				try {
+//					dataOutStream.flush();
+//					dataOutStream.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//			if (httpConn != null )httpConn.disconnect();
+//
+//			if (rs != null) rs.close();
+//			if (pstmt != null) pstmt.close();
+//			if (conn != null) conn.close();
+//		}
+//
+//	}
 	@Scheduled(fixedRate = 30000, initialDelay=3000)
 	public void stopIgnite() throws Exception {
 		LOG.info(">>>>>>>>>>>> stopIgnite");
@@ -358,12 +352,12 @@ public class HealthCheckTask {
 			rs.close();
 			pstmt.close();
 
-			if (healthStatus == -9 ) {
+			if (healthStatus == -3 ) {
 
 				LOG.info(">>>>> healthStatus={},stop ignite1&ignite", healthStatus);
 
-				String urlStr1 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest1Host, partycontactRest1Port);
-				String urlStr2 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest2Host, partycontactRest2Port);
+				String urlStr1 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest1Host, Integer.valueOf(partycontactRest1Port));
+				String urlStr2 = String.format("http://%s:%d/partycontact/stopIgnite", partycontactRest2Host, Integer.valueOf(partycontactRest2Port));
 				
 				LOG.info(">>>>> stop ignite urlStr1={}, urlStr2={}", urlStr1,urlStr2);
 				
@@ -399,6 +393,25 @@ public class HealthCheckTask {
 				responseCode = httpConn.getResponseCode();
 				LOG.info(">>>>> stop ignite2 responseCode={}",responseCode);
 				
+				Map<String, Object> cpuMap = getCpuUtilization();
+				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
+				
+				
+				int status = -4; // ignite servers already stopped
+				sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?)";
+				pstmt = conn.prepareStatement(sql);
+				pstmt.setInt(1, status); // 
+				pstmt.setBigDecimal(2, cpuUtil);
+				pstmt.executeUpdate();
+
+				conn.commit();
+				pstmt.close();
+
+				LOG.info(">>>>> insert STREAMING_HEALTH , status ={}, Done !!!", status);
+				
+				
+			} else if (healthStatus == -4 ) {
+				LOG.info(">>>>> ignite servers already stopped, healthStatus = {}, do nothing.", healthStatus);
 			} else {
 				LOG.info(">>>>> healthStatus = {}, do nothing.", healthStatus);
 			}
@@ -485,22 +498,19 @@ public class HealthCheckTask {
 					LOG.info(">>>>> call deleteConnector() Done!!!");
 
 					Map<String, Object> cpuMap = getCpuUtilization();
-					Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-					Date endTime = (Date)cpuMap.get("END_TIME");
 					BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
 
-					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
+					int status = -3; // do stop ignite servers 
+					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?)";
 					pstmt = conn.prepareStatement(sql);
-					pstmt.setInt(1, -9); // -1: restartable, -9: not restartable 
-					pstmt.setDate(2, beginTime);
-					pstmt.setDate(3, endTime);
-					pstmt.setBigDecimal(4, cpuUtil);
+					pstmt.setInt(1, status); // 
+					pstmt.setBigDecimal(2, cpuUtil);
 					pstmt.executeUpdate();
 
 					conn.commit();
 					pstmt.close();
 
-					LOG.info(">>>>> insert STREAMING_HEALTH , status -1, Done !!!");
+					LOG.info(">>>>> insert STREAMING_HEALTH , status ={}, Done !!!", status);
 
 				} else {
 					LOG.info(">>>>>>>>>>>> NO UPDATE healthStatus, abNormalCount={}", abNormalCount);
@@ -553,7 +563,7 @@ public class HealthCheckTask {
 				//				} 
 
 				if (serverRequired) {
-					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE  + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,0,NULL,NULL,NULL)";
+					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE  + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,0,NULL)";
 					pstmt1 = conn.prepareStatement(sql);
 					pstmt1.executeUpdate();
 
@@ -584,8 +594,6 @@ public class HealthCheckTask {
 			if (healthStatus == 0 || healthStatus == 1 || healthStatus == 8) {
 
 				Map<String, Object> cpuMap = getCpuUtilization();
-				Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-				Date endTime = (Date)cpuMap.get("END_TIME");
 				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
 
 				long currTimeMillis = System.currentTimeMillis();
@@ -596,13 +604,11 @@ public class HealthCheckTask {
 				pstmt1.setTimestamp(1, heartbeatTimestamp);
 				pstmt1.executeUpdate();
 
-				sql = "insert into  " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values(?,NULL,NULL,?,?,?,?)";
+				sql = "insert into  " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_VALUE) values(?,NULL,NULL,?,?)";
 				pstmt2 = conn.prepareStatement(sql);
 				pstmt2.setTimestamp(1, heartbeatTimestamp);
 				pstmt2.setInt(2, 1);
-				pstmt2.setDate(3, beginTime);
-				pstmt2.setDate(4, endTime);
-				pstmt2.setBigDecimal(5, cpuUtil);
+				pstmt2.setBigDecimal(3, cpuUtil);
 				pstmt2.executeUpdate();
 
 				conn.commit();
@@ -854,361 +860,12 @@ public class HealthCheckTask {
 			if (httpCon != null ) httpCon.disconnect();
 		}
 	}
-	//	@Scheduled(fixedRate = 60000, initialDelay=1000)
-	public void sendLogminerHeartbeat2() throws Exception {
-		Calendar calendar = Calendar.getInstance();
+	
 
-		LOG.info(">>>>>>>>>>>> sendLogminerHeartbeat1, The time is now {}", dateFormat.format(calendar.getTime()));
+	
 
-		//		LOG.info(">>>>> driver={}, url={}, username={}, pswd={}", 
-		//				logminerDbDriver,logminerDbUrl, logminerDbUsername, logminerDbPassword);
+	
 
-		Connection conn = null;
-		PreparedStatement pstmt1 = null;
-		PreparedStatement pstmt2 = null;
-		ResultSet rs = null;
-		String sql = "";
-		try {
-			Class.forName(logminerDbDriver);
-			conn = DriverManager.getConnection(logminerDbUrl, logminerDbUsername, logminerDbPassword);
-			conn.setAutoCommit(false);
-
-			if (initialLogminer) {
-				sql = "INSERT INTO " + STREAMING_HEALTH_TABLE  + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,0,NULL,NULL,NULL)";
-				pstmt1 = conn.prepareStatement(sql);
-				pstmt1.executeUpdate();
-
-				conn.commit();
-				pstmt1.close();
-
-				initialLogminer = false;
-			}
-			Thread.sleep(1000);
-
-			sql = "select HEALTH_STATUS from " + STREAMING_HEALTH_TABLE
-					+ " order by HEARTBEAT_TIME desc fetch next 1 row only";
-			pstmt1 = conn.prepareStatement(sql);
-			rs = pstmt1.executeQuery();
-			int healthStatus = 0;
-			while (rs.next()) {
-				healthStatus = rs.getInt("HEALTH_STATUS");
-			}
-			rs.close();
-			pstmt1.close();
-
-			i0++;
-			if (healthStatus == 0 || healthStatus == 1 || healthStatus == 8) {
-
-				Map<String, Object> cpuMap = getCpuUtilization();
-				Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-				Date endTime = (Date)cpuMap.get("END_TIME");
-				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
-
-				long currTimeMillis = System.currentTimeMillis();
-				Timestamp heartbeatTimestamp = new Timestamp(currTimeMillis);
-				conn.setAutoCommit(false);
-				sql = "insert into " + LOGMINER_HEARTBEAT_TABLE + " (HEARTBEAT_TIME) values(?)";
-				pstmt1 = conn.prepareStatement(sql);
-				pstmt1.setTimestamp(1, heartbeatTimestamp);
-				pstmt1.executeUpdate();
-
-				sql = "insert into  " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values(?,NULL,NULL,?,?,?,?)";
-				pstmt2 = conn.prepareStatement(sql);
-				pstmt2.setTimestamp(1, heartbeatTimestamp);
-				pstmt2.setInt(2, 1);
-				pstmt2.setDate(3, beginTime);
-				pstmt2.setDate(4, endTime);
-				pstmt2.setBigDecimal(5, cpuUtil);
-				pstmt2.executeUpdate();
-
-				conn.commit();
-				pstmt1.close();
-				pstmt2.close();
-
-				LOG.info(">>>>> insert HEARTBEAT_TIME={}", heartbeatTimestamp);
-
-				Timestamp heartBeatTime = null;
-				Timestamp logminerReceived = null;
-				int queryCount1 = 0;
-				boolean logminerFailed = false;
-
-				while (logminerReceived == null) {
-					if (queryCount1 < 10) {
-						Thread.sleep(500);
-						queryCount1++;
-					} else {
-						logminerFailed = true;
-						break;
-					}
-
-					sql = "select HEARTBEAT_TIME,LOGMINER_RECEIVED from " + STREAMING_HEALTH_TABLE
-							+ " where HEARTBEAT_TIME=?";
-					pstmt1 = conn.prepareStatement(sql);
-					pstmt1.setTimestamp(1, new Timestamp(currTimeMillis));
-					rs = pstmt1.executeQuery();
-
-					while (rs.next()) {
-						heartBeatTime = rs.getTimestamp("HEARTBEAT_TIME");
-						logminerReceived = rs.getTimestamp("LOGMINER_RECEIVED");
-					}
-					rs.close();
-					pstmt1.close();
-
-					LOG.info(">>>>> logminerReceived={},queryCount1={}",logminerReceived,queryCount1); 
-
-				}
-
-				if ((i0 > 3 && i1 == 0) || (i0 > 10 && i1 == 1)) {
-					LOG.info(">>>>> for testing set received null");
-					sql = "update " + STREAMING_HEALTH_TABLE
-							+ " set LOGMINER_RECEIVED =NULL where HEARTBEAT_TIME=?";
-					pstmt1 = conn.prepareStatement(sql);
-					pstmt1.setTimestamp(1, new Timestamp(currTimeMillis));
-					pstmt1.executeUpdate();
-
-					pstmt1.close();
-				}
-
-				if (logminerFailed) {
-					long nowmillis = System.currentTimeMillis();
-					LOG.info("XXXXX Logminer sync NOT OK. No response from logminer, Logminer sync Error!!!, currTimeMillis={}, nowmillis={},queryCount1={}",currTimeMillis, nowmillis, queryCount1);
-
-				} else {
-					LOG.info(">>>>> Logminer sync OK.  HeartBeatTime.Time={}, logminerReceived.Time={},queryCount1={}", heartBeatTime, logminerReceived,queryCount1);
-				}
-			} else {
-				LOG.info(">>>>> healthStatus={}, do nothing", healthStatus);
-			}
-		} catch (Exception e1) {
-
-			LOG.error(">>>>> Error!!!, error msg={}, stacetrace={}", ExceptionUtils.getMessage(e1), ExceptionUtils.getStackTrace(e1));
-
-			throw e1;
-		} finally {
-			if (rs != null) rs.close();
-			if (pstmt1 != null) pstmt1.close();
-			if (pstmt2 != null) pstmt2.close();
-			if (conn != null) conn.close();
-		}
-	}
-	//	@Scheduled(fixedRate = 65000, initialDelay=2000)
-	public void checkHealthStatusAndDeleteConnector2() throws Exception {
-		LOG.info(">>>>>>>>>>>> checkHealthStatusAndDeleteConnector2");
-
-		//		LOG.info(">>>>> driver={}, url={}, username={}, pswd={}", 
-		//				logminerDbDriver,logminerDbUrl, logminerDbUsername, logminerDbPassword);
-
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "";
-		try {
-			Class.forName(logminerDbDriver);
-			conn = DriverManager.getConnection(logminerDbUrl, logminerDbUsername, logminerDbPassword);
-			conn.setAutoCommit(false);
-
-			sql = "select LOGMINER_RECEIVED,HEALTH_STATUS from " + STREAMING_HEALTH_TABLE
-					+ " order by HEARTBEAT_TIME desc fetch next 1 row only";
-			pstmt = conn.prepareStatement(sql);
-			rs = pstmt.executeQuery();
-			int healthStatus = 0;
-			Timestamp logminerReceived = null;
-			while (rs.next()) {
-				logminerReceived = rs.getTimestamp("LOGMINER_RECEIVED");
-				healthStatus = rs.getInt("HEALTH_STATUS");
-			}
-			rs.close();
-			pstmt.close();
-
-			if (healthStatus == 1 && logminerReceived == null) {
-				sql = "select count(*) as CNT from " + STREAMING_HEALTH_TABLE + "\n"  
-						+ " WHERE LOGMINER_RECEIVED IS NULL and HEALTH_STATUS = 1 AND heartbeat_time >\n" 
-						+ " (select heartbeat_time from STREAMING_HEALTH\n" 
-						+ " where (health_status = 0 or health_status = 8) \n"
-						+ " order by heartbeat_time desc fetch next 1 row only)"
-						+ " order by HEARTBEAT_TIME desc";
-				pstmt = conn.prepareStatement(sql);
-				rs = pstmt.executeQuery();
-				int abNormalCount = 0;
-				while (rs.next()) {
-					abNormalCount = rs.getInt("CNT");
-				}
-				rs.close();
-				pstmt.close();
-
-				if (abNormalCount > 2) {
-
-					// pause connector
-					pauseConnector();
-					LOG.info(">>>>> call pauseConnector() Done!!!");
-
-					//wait for 30 seconds
-					LOG.info(">>>>> wait for 30 seconds");
-					Thread.sleep(30000);
-
-					// delete connector
-					deleteConnector();
-					LOG.info(">>>>> call deleteConnector() Done!!!");
-
-					Map<String, Object> cpuMap = getCpuUtilization();
-					Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-					Date endTime = (Date)cpuMap.get("END_TIME");
-					BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
-
-					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setInt(1, -1);
-					pstmt.setDate(2, beginTime);
-					pstmt.setDate(3, endTime);
-					pstmt.setBigDecimal(4, cpuUtil);
-					pstmt.executeUpdate();
-
-					conn.commit();
-					pstmt.close();
-
-					LOG.info(">>>>> insert STREAMING_HEALTH , status -1, Done !!!");
-
-				} else {
-					LOG.info(">>>>>>>>>>>> NO UPDATE healthStatus, abNormalCount={}", abNormalCount);
-				}
-			} else {
-				LOG.info(">>>>> healthStatus = {} , do nothing", healthStatus); 
-			}
-
-		} catch (Exception e1) {
-
-			LOG.error(">>>>> Error!!!, error msg={}, stacetrace={}", ExceptionUtils.getMessage(e1), ExceptionUtils.getStackTrace(e1));
-
-			throw e1;
-		} finally {
-			if (rs != null) rs.close();
-			if (pstmt != null) pstmt.close();
-			if (conn != null) conn.close();
-		}
-	}
-	//	@Scheduled(fixedRate = 30000, initialDelay=4000)
-	public void createNewConnector2() throws Exception {
-		LOG.info(">>>>>>>>>>>> createNewConnector");
-
-		HttpURLConnection httpConn = null;
-		DataOutputStream dataOutStream = null;
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "";
-		try {
-			Class.forName(logminerDbDriver);
-			conn = DriverManager.getConnection(logminerDbUrl, logminerDbUsername, logminerDbPassword);
-			conn.setAutoCommit(false);
-
-			sql = "select HEARTBEAT_TIME, HEALTH_STATUS from " + STREAMING_HEALTH_TABLE
-					+ " order by HEARTBEAT_TIME desc fetch next 1 row only";
-			pstmt = conn.prepareStatement(sql);
-			rs = pstmt.executeQuery();
-			int healthStatus = 0;
-			while (rs.next()) {
-				healthStatus = rs.getInt("HEALTH_STATUS");
-			}
-			rs.close();
-			pstmt.close();
-
-			if (healthStatus == -1 ) {
-
-				Map<String, Object> cpuMap = getCpuUtilization();
-				Date beginTime = (Date)cpuMap.get("BEGIN_TIME");
-				Date endTime = (Date)cpuMap.get("END_TIME");
-				BigDecimal cpuUtil = (BigDecimal)cpuMap.get("VALUE");
-
-				//	if (cpuUtil.doubleValue() < 30) {
-				// create new connector
-				LOG.info(">>>>> cpu util < {}, create new connector...", cpuUtil.doubleValue());
-
-				String reConfigStr = getReConfigStr();	
-				String urlStr = "http://localhost:" + connectRestPort+"/connectors";
-
-				LOG.info(">>>>> connector urlStr={},reConfigStr={}", urlStr, reConfigStr);
-
-				URL url = new URL(urlStr);
-				httpConn = (HttpURLConnection)url.openConnection();
-				httpConn.setRequestMethod("POST");
-				httpConn.setDoInput(true);
-				httpConn.setDoOutput(true);
-				httpConn.setRequestProperty("Content-Type", "application/json");
-				httpConn.setRequestProperty("Accept", "application/json");
-				//					String data="";
-				//					byte[] out = data.getBytes(StandardCharsets.UTF_8);
-
-				dataOutStream = new DataOutputStream(httpConn.getOutputStream());
-				dataOutStream.writeBytes(reConfigStr);
-
-				dataOutStream.flush();
-
-				int responseCode = httpConn.getResponseCode();
-				LOG.info(">>>>> createNewConnector responseCode={}",responseCode);
-
-				String connectorState = getConnectorState();
-				String taskState = getConnectorTaskState();
-				LOG.info(">>>>> check connectorState={},taskState={}", connectorState, taskState);
-
-				// reset health status
-				LOG.info(">>>>> set health status 8");
-				sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
-				pstmt = conn.prepareStatement(sql);
-				pstmt.setInt(1, 8);
-				pstmt.setDate(2, beginTime);
-				pstmt.setDate(3, endTime);
-				pstmt.setBigDecimal(4, cpuUtil);
-				pstmt.executeUpdate();
-				conn.commit();
-				pstmt.close();
-
-				if ( i1== 0) {
-					i1 = 1;
-				} else if (i1 == 1) {
-					i1 = 2;
-				}
-				//				} else {
-				//					// record and keep waiting
-				//					LOG.info(">>>>> cpu util >= {}, keep waiting...", cpuUtil.doubleValue());
-				//
-				//					sql = "INSERT INTO " + STREAMING_HEALTH_TABLE + " (HEARTBEAT_TIME,LOGMINER_SCN,LOGMINER_RECEIVED,HEALTH_STATUS,CPU_UTIL_BT,CPU_UTIL_ET,CPU_UTIL_VALUE) values (CURRENT_TIMESTAMP,NULL,NULL,?,?,?,?)";
-				//					pstmt = conn.prepareStatement(sql);
-				//					pstmt.setInt(1, -1);
-				//					pstmt.setDate(2, beginTime);
-				//					pstmt.setDate(3, endTime);
-				//					pstmt.setBigDecimal(4, cpuUtil);
-				//					pstmt.executeUpdate();
-				//
-				//					conn.commit();
-				//					pstmt.close();
-				//				}skipRecord=false; // do not skip record
-
-			} else {
-				LOG.info(">>>>> healthStatus = {}, do nothing.", healthStatus);
-			}
-
-		}  catch (Exception e1) {
-
-			LOG.error(">>>>> ErrorMessage={}, stacktrace={}", ExceptionUtils.getMessage(e1), ExceptionUtils.getStackTrace(e1));
-
-			throw e1;
-		} finally {
-			if (dataOutStream != null) {
-				try {
-					dataOutStream.flush();
-					dataOutStream.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			if (httpConn != null )httpConn.disconnect();
-
-			if (rs != null) rs.close();
-			if (pstmt != null) pstmt.close();
-			if (conn != null) conn.close();
-		}
-
-	}
 //	private String getServerStatus(String servername) throws Exception {
 //		String urlStr = "";
 //		if (ZOOKEEPER_SERVER.equals(servername)) {

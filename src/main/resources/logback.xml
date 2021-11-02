@@ -1,6 +1,6 @@
 <configuration>
-	<property name="LOG_DIR" value="../logs" />
-	<property name="LOG_FILE" value="streaming-scheduling" />
+	<property name="LOG_DIR" value="/data/streamingetl/logs" />
+	<property name="LOG_FILE" value="streamingetl-scheduling" />
 	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
 			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
